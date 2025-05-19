@@ -1,6 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getPatients, getDoctors, getAppointments } from '../services/receptionistService.ts';
+import {
+  getPatients,
+  getDoctors,
+  getAppointments,
+  getDoctorsBySpeciality,
+  createAppointment
+} from '../services/receptionistService.ts';
 
 export default function ReceptionistDashboard() {
   const [tab, setTab] = useState<'patients' | 'doctors' | 'appointments'>('patients');
@@ -9,6 +15,19 @@ export default function ReceptionistDashboard() {
   const [appointments, setAppointments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showAppointmentForm, setShowAppointmentForm] = useState(false);
+  const [appointmentForm, setAppointmentForm] = useState({
+    doctor_id: '',
+    patient_id: '',
+    date: '',
+    time: '',
+    notes: ''
+  });
+  const [specialityFilter, setSpecialityFilter] = useState('');
+  const [filteredDoctors, setFilteredDoctors] = useState<any[]>([]);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const [createSuccess, setCreateSuccess] = useState('');
 
   useEffect(() => {
     setError('');
@@ -45,6 +64,66 @@ export default function ReceptionistDashboard() {
     }
   }, [tab]);
 
+  // Carregar médicos ao abrir o formulário de consulta, se necessário
+  useEffect(() => {
+    if (showAppointmentForm && doctors.length === 0) {
+      getDoctors()
+        .then(res => {
+          const arr = Array.isArray(res.data.doctors) ? res.data.doctors : [];
+          setDoctors(arr);
+        })
+        .catch(() => setDoctors([]));
+    }
+  }, [showAppointmentForm, doctors.length]);
+
+  // Buscar médicos por especialidade ou listar todos ao abrir o formulário
+  useEffect(() => {
+    if (!showAppointmentForm) return; // Só atualiza quando o formulário está aberto
+    if (specialityFilter.trim()) {
+      getDoctorsBySpeciality(specialityFilter)
+        .then(res => {
+          const arr = Array.isArray(res.data.doctors) ? res.data.doctors : [];
+          setFilteredDoctors(arr);
+        })
+        .catch(() => setFilteredDoctors([]));
+    } else {
+      setFilteredDoctors(doctors);
+    }
+  }, [specialityFilter, doctors, showAppointmentForm]);
+
+  const handleAppointmentChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setAppointmentForm({ ...appointmentForm, [e.target.name]: e.target.value });
+  };
+
+  const handleCreateAppointment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+    setCreateError('');
+    setCreateSuccess('');
+    try {
+      await createAppointment(appointmentForm);
+      setCreateSuccess('Consulta criada com sucesso!');
+      setShowAppointmentForm(false);
+      setAppointmentForm({
+        doctor_id: '',
+        patient_id: '',
+        date: '',
+        time: '',
+        notes: ''
+      });
+      // Atualiza lista de consultas
+      getAppointments()
+        .then(res => {
+          const arr = Array.isArray(res.data.data) ? res.data.data : [];
+          setAppointments(arr);
+        });
+    } catch (err: any) {
+      setCreateError(err.response?.data?.message || 'Erro ao criar consulta.');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   return (
     <div>
       <h2>Painel do Recepcionista</h2>
@@ -61,7 +140,100 @@ export default function ReceptionistDashboard() {
         <Link to="/registro/medico?admin=1">
           + Cadastrar novo médico
         </Link>
+        {' | '}
+        <button onClick={() => setShowAppointmentForm(v => !v)}>
+          {showAppointmentForm ? 'Cancelar' : '+ Criar nova consulta'}
+        </button>
       </div>
+      {showAppointmentForm && (
+        <form onSubmit={handleCreateAppointment} style={{ border: '1px solid #ccc', padding: 16, marginBottom: 16 }}>
+          <h4>Criar nova consulta</h4>
+          <div>
+            <label>Paciente:&nbsp;
+              <select
+                name="patient_id"
+                value={appointmentForm.patient_id}
+                onChange={handleAppointmentChange}
+                required
+              >
+                <option value="">Selecione...</option>
+                {patients.map((p: any) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name || p.user?.name} - {p.email || p.user?.email}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Especialidade:&nbsp;
+              <input
+                type="text"
+                placeholder="Filtrar especialidade (opcional)"
+                value={specialityFilter}
+                onChange={e => setSpecialityFilter(e.target.value)}
+                style={{ width: 180 }}
+              />
+              <span style={{ fontSize: 12, color: '#888', marginLeft: 8 }}>
+                (deixe em branco para listar todos)
+              </span>
+            </label>
+          </div>
+          <div>
+            <label>Médico:&nbsp;
+              <select
+                name="doctor_id"
+                value={appointmentForm.doctor_id}
+                onChange={handleAppointmentChange}
+                required
+              >
+                <option value="">Selecione...</option>
+                {filteredDoctors.map((d: any) => (
+                  <option key={d.id} value={d.id}>
+                    {d.user?.name || d.name} - {d.speciality}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>Data:&nbsp;
+              <input
+                type="date"
+                name="date"
+                value={appointmentForm.date}
+                onChange={handleAppointmentChange}
+                required
+              />
+            </label>
+          </div>
+          <div>
+            <label>Hora:&nbsp;
+              <input
+                type="time"
+                name="time"
+                value={appointmentForm.time}
+                onChange={handleAppointmentChange}
+                required
+              />
+            </label>
+          </div>
+          <div>
+            <label>Observações:&nbsp;
+              <textarea
+                name="notes"
+                value={appointmentForm.notes}
+                onChange={handleAppointmentChange}
+                rows={2}
+                style={{ width: 250 }}
+              />
+            </label>
+          </div>
+          <button type="submit" disabled={creating}>Criar Consulta</button>
+          {createError && <p style={{ color: 'red' }}>{createError}</p>}
+          {createSuccess && <p style={{ color: 'green' }}>{createSuccess}</p>}
+        </form>
+      )}
       {loading && <p>Carregando...</p>}
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {tab === 'patients' && (

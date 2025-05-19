@@ -24,4 +24,18 @@ export async function getAppointments() {
   return axios.get(`${API_BASE_URL}/api/v1/appointments`, authHeaders());
 }
 
+export async function getDoctorsBySpeciality(speciality: string) {
+  return axios.get(`${API_BASE_URL}/api/v1/doctors/speciality/${speciality}`, authHeaders());
+}
+
+export async function createAppointment(data: {
+  doctor_id: string;
+  patient_id: string;
+  date: string;
+  time: string;
+  notes?: string;
+}) {
+  return axios.post(`${API_BASE_URL}/api/v1/appointments`, data, authHeaders());
+}
+
 // Adicione outras funções conforme necessário (notificações, cadastrar médico, etc)
