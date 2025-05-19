@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { login } from '../services/authService.ts';
 
 export default function LoginReceptionist() {
@@ -44,6 +44,9 @@ export default function LoginReceptionist() {
         <button type="submit">Entrar</button>
         {error && <p style={{ color: 'red' }}>{error}</p>}
       </form>
+      <p>
+        Não tem conta? <Link to="/registro/recepcionista">Registre-se</Link>
+      </p>
     </div>
   );
 }

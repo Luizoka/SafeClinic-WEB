@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { login } from '../services/authService.ts';
 
 export default function LoginDoctor() {
@@ -44,6 +44,9 @@ export default function LoginDoctor() {
         <button type="submit">Entrar</button>
         {error && <p style={{ color: 'red' }}>{error}</p>}
       </form>
+      <p>
+        Não tem conta? <Link to="/registro/medico">Registre-se</Link>
+      </p>
     </div>
   );
 }

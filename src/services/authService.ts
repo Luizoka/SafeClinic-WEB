@@ -33,3 +33,48 @@ export function getUser() {
   const user = localStorage.getItem('user');
   return user ? JSON.parse(user) : null;
 }
+
+export async function registerDoctor(data: {
+  name: string;
+  email: string;
+  crm: string;
+  speciality: string;
+  password: string;
+}) {
+  const url = `${API_BASE_URL}/api/v1/doctors`;
+  return axios.post(url, data); // Não há CPF ou telefone aqui
+}
+
+export async function registerPatient(data: {
+  name: string;
+  email: string;
+  cpf: string;
+  birthDate: string;
+  password: string;
+}) {
+  const url = `${API_BASE_URL}/api/v1/patients`;
+  const payload = {
+    ...data,
+    cpf: data.cpf.replace(/\D/g, ''), // Remove máscara do CPF
+    birth_date: data.birthDate,
+  };
+  delete (payload as any).birthDate;
+  return axios.post(url, payload);
+}
+
+export async function registerReceptionist(data: {
+  name: string;
+  email: string;
+  password: string;
+  cpf: string;
+  phone: string;
+  work_shift: string;
+}) {
+  const url = `${API_BASE_URL}/api/v1/receptionists`;
+  const payload = {
+    ...data,
+    cpf: data.cpf.replace(/\D/g, ''),   // Remove máscara do CPF
+    phone: data.phone.replace(/\D/g, ''), // Remove máscara do telefone
+  };
+  return axios.post(url, payload);
+}
