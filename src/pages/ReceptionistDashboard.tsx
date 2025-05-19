@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { getPatients, getDoctors, getAppointments } from '../services/receptionistService.ts';
 
 export default function ReceptionistDashboard() {
@@ -51,6 +52,11 @@ export default function ReceptionistDashboard() {
         <button onClick={() => setTab('patients')}>Pacientes</button>
         <button onClick={() => setTab('doctors')}>Médicos</button>
         <button onClick={() => setTab('appointments')}>Consultas</button>
+      </div>
+      <div style={{ margin: '16px 0' }}>
+        <Link to="/registro/paciente?admin=1">
+          + Cadastrar novo paciente
+        </Link>
       </div>
       {loading && <p>Carregando...</p>}
       {error && <p style={{ color: 'red' }}>{error}</p>}

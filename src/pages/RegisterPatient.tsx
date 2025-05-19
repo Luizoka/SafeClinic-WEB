@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { registerPatient } from '../services/authService.ts';
 
 // Função para aplicar máscara de CPF
@@ -22,6 +22,7 @@ export default function RegisterPatient() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -39,7 +40,14 @@ export default function RegisterPatient() {
     try {
       await registerPatient(form);
       setSuccess('Paciente registrado com sucesso!');
-      setTimeout(() => navigate('/login/paciente'), 1500);
+      setTimeout(() => {
+        // Se veio do painel do recepcionista, volta para lá
+        if (location.search.includes('admin=1')) {
+          navigate('/painel/recepcionista');
+        } else {
+          navigate('/login/paciente');
+        }
+      }, 1500);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erro ao registrar paciente.');
     }
