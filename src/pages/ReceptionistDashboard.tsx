@@ -57,6 +57,10 @@ export default function ReceptionistDashboard() {
         <Link to="/registro/paciente?admin=1">
           + Cadastrar novo paciente
         </Link>
+        {' | '}
+        <Link to="/registro/medico?admin=1">
+          + Cadastrar novo médico
+        </Link>
       </div>
       {loading && <p>Carregando...</p>}
       {error && <p style={{ color: 'red' }}>{error}</p>}

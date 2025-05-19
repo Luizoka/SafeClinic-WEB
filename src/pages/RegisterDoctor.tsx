@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { registerDoctor } from '../services/authService.ts';
 
 export default function RegisterDoctor() {
@@ -13,6 +13,7 @@ export default function RegisterDoctor() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -25,7 +26,13 @@ export default function RegisterDoctor() {
     try {
       await registerDoctor(form);
       setSuccess('Médico registrado com sucesso!');
-      setTimeout(() => navigate('/login/medico'), 1500);
+      setTimeout(() => {
+        if (location.search.includes('admin=1')) {
+          navigate('/painel/recepcionista');
+        } else {
+          navigate('/login/medico');
+        }
+      }, 1500);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erro ao registrar médico.');
     }
