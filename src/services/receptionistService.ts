@@ -42,4 +42,8 @@ export async function getSpecialities() {
   return axios.get(`${API_BASE_URL}/api/v1/specialities`, authHeaders());
 }
 
+export async function getAppointmentsPaginated(page = 1, limit = 10) {
+  return axios.get(`${API_BASE_URL}/api/v1/appointments?page=${page}&limit=${limit}`, authHeaders());
+}
+
 // Adicione outras funções conforme necessário (notificações, cadastrar médico, etc)

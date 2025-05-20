@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   getPatients,
   getDoctors,
-  getAppointments,
+  getAppointmentsPaginated,
   getDoctorsBySpeciality,
   createAppointment
 } from '../services/receptionistService.ts';
@@ -52,7 +52,7 @@ export default function ReceptionistDashboard() {
         .catch(() => setError('Erro ao carregar médicos.'))
         .finally(() => setLoading(false));
     } else if (tab === 'appointments') {
-      getAppointments()
+      getAppointmentsPaginated()
         .then(res => {
           console.log('API consultas:', res.data);
           // Aqui o array está em res.data.data
@@ -103,6 +103,7 @@ export default function ReceptionistDashboard() {
     try {
       await createAppointment(appointmentForm);
       setCreateSuccess('Consulta criada com sucesso!');
+      setTimeout(() => setCreateSuccess(''), 2000);
       setShowAppointmentForm(false);
       setAppointmentForm({
         doctor_id: '',
@@ -111,14 +112,15 @@ export default function ReceptionistDashboard() {
         time: '',
         notes: ''
       });
-      // Atualiza lista de consultas
-      getAppointments()
+      // Atualiza lista de consultas paginada
+      getAppointmentsPaginated()
         .then(res => {
           const arr = Array.isArray(res.data.data) ? res.data.data : [];
           setAppointments(arr);
         });
     } catch (err: any) {
       setCreateError(err.response?.data?.message || 'Erro ao criar consulta.');
+      setTimeout(() => setCreateError(''), 3000);
     } finally {
       setCreating(false);
     }
@@ -190,7 +192,11 @@ export default function ReceptionistDashboard() {
                 <option value="">Selecione...</option>
                 {filteredDoctors.map((d: any) => (
                   <option key={d.user_id} value={d.user_id}>
-                    {d.user?.name || d.name} - {d.speciality}
+                    {(typeof d.user?.name === 'string' ? d.user.name : '')}
+                    {' - '}
+                    {typeof d.speciality === 'string'
+                      ? d.speciality
+                      : (d.speciality?.name || '')}
                   </option>
                 ))}
               </select>
@@ -265,7 +271,9 @@ export default function ReceptionistDashboard() {
                   {' | CRM: '}
                   {typeof d.crm === 'string' ? d.crm : ''}
                   {' | Especialidade: '}
-                  {typeof d.speciality?.name === 'string' ? d.speciality.name : ''}
+                  {typeof d.speciality === 'string'
+                    ? d.speciality
+                    : (d.speciality?.name || '')}
                 </li>
               ))}
             </ul>
@@ -281,7 +289,19 @@ export default function ReceptionistDashboard() {
             <ul>
               {appointments.map((a: any) => (
                 <li key={a.id}>
-                  Paciente: {a.patient?.name} | Médico: {a.doctor?.name} | Data: {a.date}
+                  Paciente: {a.patient?.name || a.patient?.user_id}
+                  {' | Médico: '}
+                  {a.doctor?.name || a.doctor?.user_id}
+                  {' | Especialidade: '}
+                  {typeof a.doctor?.speciality === 'string'
+                    ? a.doctor.speciality
+                    : (a.doctor?.speciality?.name || '')}
+                  {' | Data: '}
+                  {a.appointment_datetime
+                    ? new Date(a.appointment_datetime).toLocaleString('pt-BR')
+                    : ''}
+                  {' | Sintomas: '}
+                  {a.symptoms_description || a.notes || ''}
                 </li>
               ))}
             </ul>
