@@ -158,7 +158,7 @@ export default function ReceptionistDashboard() {
               >
                 <option value="">Selecione...</option>
                 {patients.map((p: any) => (
-                  <option key={p.id} value={p.id}>
+                  <option key={p.user_id} value={p.user_id}>
                     {p.name || p.user?.name} - {p.email || p.user?.email}
                   </option>
                 ))}
@@ -189,7 +189,7 @@ export default function ReceptionistDashboard() {
               >
                 <option value="">Selecione...</option>
                 {filteredDoctors.map((d: any) => (
-                  <option key={d.id} value={d.id}>
+                  <option key={d.user_id} value={d.user_id}>
                     {d.user?.name || d.name} - {d.speciality}
                   </option>
                 ))}
@@ -244,7 +244,7 @@ export default function ReceptionistDashboard() {
           ) : (
             <ul>
               {patients.map((p: any) => (
-                <li key={p.id}>{p.name || p.user?.name} - {p.email || p.user?.email}</li>
+                <li key={p.user_id}>{p.name || p.user?.name} - {p.email || p.user?.email}</li>
               ))}
             </ul>
           )}
@@ -258,14 +258,14 @@ export default function ReceptionistDashboard() {
           ) : (
             <ul>
               {doctors.map((d: any) => (
-                <li key={d.id}>
-                  {d.user?.name || d.name}
+                <li key={d.user_id}>
+                  {(typeof d.user?.name === 'string' ? d.user.name : '')}
                   {' - '}
-                  {d.user?.email || d.email}
+                  {(typeof d.user?.email === 'string' ? d.user.email : '')}
                   {' | CRM: '}
-                  {d.crm}
+                  {typeof d.crm === 'string' ? d.crm : ''}
                   {' | Especialidade: '}
-                  {d.speciality}
+                  {typeof d.speciality?.name === 'string' ? d.speciality.name : ''}
                 </li>
               ))}
             </ul>

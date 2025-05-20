@@ -37,12 +37,18 @@ export function getUser() {
 export async function registerDoctor(data: {
   name: string;
   email: string;
+  cpf: string;
   crm: string;
-  speciality: string;
+  speciality_id: string;
   password: string;
 }) {
   const url = `${API_BASE_URL}/api/v1/doctors`;
-  return axios.post(url, data); // Não há CPF ou telefone aqui
+  const token = getToken();
+  return axios.post(url, data, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 }
 
 export async function registerPatient(data: {
