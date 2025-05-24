@@ -7,6 +7,7 @@ import {
   getDoctorsBySpeciality,
   createAppointment
 } from '../services/receptionistService.ts';
+import '../styles/receptionistDashboard.css';
 
 export default function ReceptionistDashboard() {
   const [tab, setTab] = useState<'patients' | 'doctors' | 'appointments'>('patients');
@@ -127,32 +128,56 @@ export default function ReceptionistDashboard() {
   };
 
   return (
-    <div>
-      <h2>Painel do Recepcionista</h2>
-      <div>
-        <button onClick={() => setTab('patients')}>Pacientes</button>
-        <button onClick={() => setTab('doctors')}>Médicos</button>
-        <button onClick={() => setTab('appointments')}>Consultas</button>
+    <div className="dashboard-container">
+      <div className="dashboard-header">
+        <h2 className="dashboard-title">Painel do Recepcionista</h2>
       </div>
-      <div style={{ margin: '16px 0' }}>
-        <Link to="/registro/paciente?admin=1">
+
+      <div className="tab-container">
+        <button 
+          className={`tab-button ${tab === 'patients' ? 'active' : ''}`}
+          onClick={() => setTab('patients')}
+        >
+          Pacientes
+        </button>
+        <button 
+          className={`tab-button ${tab === 'doctors' ? 'active' : ''}`}
+          onClick={() => setTab('doctors')}
+        >
+          Médicos
+        </button>
+        <button 
+          className={`tab-button ${tab === 'appointments' ? 'active' : ''}`}
+          onClick={() => setTab('appointments')}
+        >
+          Consultas
+        </button>
+      </div>
+
+      <div className="action-bar">
+        <Link to="/registro/paciente?admin=1" className="action-link">
           + Cadastrar novo paciente
         </Link>
-        {' | '}
-        <Link to="/registro/medico?admin=1">
+        <Link to="/registro/medico?admin=1" className="action-link">
           + Cadastrar novo médico
         </Link>
-        {' | '}
-        <button onClick={() => setShowAppointmentForm(v => !v)}>
+        <button 
+          className="action-button"
+          onClick={() => setShowAppointmentForm(v => !v)}
+        >
           {showAppointmentForm ? 'Cancelar' : '+ Criar nova consulta'}
         </button>
       </div>
+
       {showAppointmentForm && (
-        <form onSubmit={handleCreateAppointment} style={{ border: '1px solid #ccc', padding: 16, marginBottom: 16 }}>
-          <h4>Criar nova consulta</h4>
-          <div>
-            <label>Paciente:&nbsp;
+        <form onSubmit={handleCreateAppointment} className="appointment-form">
+          <h4 className="form-title">Criar nova consulta</h4>
+          
+          <div className="form-group">
+            <label className="form-label">
+              Paciente
               <select
+                className="form-select"
                 name="patient_id"
                 value={appointmentForm.patient_id}
                 onChange={handleAppointmentChange}
@@ -167,23 +192,28 @@ export default function ReceptionistDashboard() {
               </select>
             </label>
           </div>
-          <div>
-            <label>Especialidade:&nbsp;
+
+          <div className="form-group">
+            <label className="form-label">
+              Especialidade
               <input
+                className="form-input"
                 type="text"
                 placeholder="Filtrar especialidade (opcional)"
                 value={specialityFilter}
                 onChange={e => setSpecialityFilter(e.target.value)}
-                style={{ width: 180 }}
               />
-              <span style={{ fontSize: 12, color: '#888', marginLeft: 8 }}>
+              <span style={{ fontSize: 12, color: '#888', marginTop: 4, display: 'block' }}>
                 (deixe em branco para listar todos)
               </span>
             </label>
           </div>
-          <div>
-            <label>Médico:&nbsp;
+
+          <div className="form-group">
+            <label className="form-label">
+              Médico
               <select
+                className="form-select"
                 name="doctor_id"
                 value={appointmentForm.doctor_id}
                 onChange={handleAppointmentChange}
@@ -202,9 +232,12 @@ export default function ReceptionistDashboard() {
               </select>
             </label>
           </div>
-          <div>
-            <label>Data:&nbsp;
+
+          <div className="form-group">
+            <label className="form-label">
+              Data
               <input
+                className="form-input"
                 type="date"
                 name="date"
                 value={appointmentForm.date}
@@ -213,9 +246,12 @@ export default function ReceptionistDashboard() {
               />
             </label>
           </div>
-          <div>
-            <label>Hora:&nbsp;
+
+          <div className="form-group">
+            <label className="form-label">
+              Hora
               <input
+                className="form-input"
                 type="time"
                 name="time"
                 value={appointmentForm.time}
@@ -224,87 +260,90 @@ export default function ReceptionistDashboard() {
               />
             </label>
           </div>
-          <div>
-            <label>Observações:&nbsp;
+
+          <div className="form-group">
+            <label className="form-label">
+              Observações
               <textarea
+                className="form-textarea"
                 name="notes"
                 value={appointmentForm.notes}
                 onChange={handleAppointmentChange}
                 rows={2}
-                style={{ width: 250 }}
               />
             </label>
           </div>
-          <button type="submit" disabled={creating}>Criar Consulta</button>
-          {createError && <p style={{ color: 'red' }}>{createError}</p>}
-          {createSuccess && <p style={{ color: 'green' }}>{createSuccess}</p>}
+
+          <button 
+            type="submit" 
+            className="form-button"
+            disabled={creating}
+          >
+            {creating ? 'Criando...' : 'Criar Consulta'}
+          </button>
+
+          {createError && <p className="error-message">{createError}</p>}
+          {createSuccess && <p className="success-message">{createSuccess}</p>}
         </form>
       )}
-      {loading && <p>Carregando...</p>}
-      {error && <p style={{ color: 'red' }}>{error}</p>}
+
+      {loading && <p className="loading-message">Carregando...</p>}
+      {error && <p className="error-message">{error}</p>}
+
       {tab === 'patients' && (
-        <div>
-          <h3>Pacientes</h3>
+        <div className="data-grid">
+          <h3 className="data-title">Pacientes</h3>
           {patients.length === 0 ? (
-            <p>Não há pacientes.</p>
+            <p className="empty-message">Não há pacientes cadastrados.</p>
           ) : (
-            <ul>
-              {patients.map((p: any) => (
-                <li key={p.user_id}>{p.name || p.user?.name} - {p.email || p.user?.email}</li>
-              ))}
-            </ul>
+            patients.map((patient: any) => (
+              <div key={patient.user_id} className="data-card">
+                <h4>{patient.name || patient.user?.name}</h4>
+                <p>Email: {patient.email || patient.user?.email}</p>
+                <p>CPF: {patient.cpf}</p>
+                <p>Telefone: {patient.phone}</p>
+                <p>Data de Nascimento: {new Date(patient.birthDate).toLocaleDateString()}</p>
+              </div>
+            ))
           )}
         </div>
       )}
+
       {tab === 'doctors' && (
-        <div>
-          <h3>Médicos</h3>
+        <div className="data-grid">
+          <h3 className="data-title">Médicos</h3>
           {doctors.length === 0 ? (
-            <p>Não há médicos.</p>
+            <p className="empty-message">Não há médicos cadastrados.</p>
           ) : (
-            <ul>
-              {doctors.map((d: any) => (
-                <li key={d.user_id}>
-                  {(typeof d.user?.name === 'string' ? d.user.name : '')}
-                  {' - '}
-                  {(typeof d.user?.email === 'string' ? d.user.email : '')}
-                  {' | CRM: '}
-                  {typeof d.crm === 'string' ? d.crm : ''}
-                  {' | Especialidade: '}
-                  {typeof d.speciality === 'string'
-                    ? d.speciality
-                    : (d.speciality?.name || '')}
-                </li>
-              ))}
-            </ul>
+            doctors.map((doctor: any) => (
+              <div key={doctor.user_id} className="data-card">
+                <h4>{doctor.user?.name}</h4>
+                <p>Email: {doctor.user?.email}</p>
+                <p>CRM: {doctor.crm}</p>
+                <p>Especialidade: {doctor.speciality?.name || doctor.speciality}</p>
+              </div>
+            ))
           )}
         </div>
       )}
+
       {tab === 'appointments' && (
-        <div>
-          <h3>Consultas</h3>
+        <div className="data-grid">
+          <h3 className="data-title">Consultas</h3>
           {appointments.length === 0 ? (
-            <p>Não há consultas.</p>
+            <p className="empty-message">Não há consultas agendadas.</p>
           ) : (
-            <ul>
-              {appointments.map((a: any) => (
-                <li key={a.id}>
-                  Paciente: {a.patient?.name || a.patient?.user_id}
-                  {' | Médico: '}
-                  {a.doctor?.name || a.doctor?.user_id}
-                  {' | Especialidade: '}
-                  {typeof a.doctor?.speciality === 'string'
-                    ? a.doctor.speciality
-                    : (a.doctor?.speciality?.name || '')}
-                  {' | Data: '}
-                  {a.appointment_datetime
-                    ? new Date(a.appointment_datetime).toLocaleString('pt-BR')
-                    : ''}
-                  {' | Sintomas: '}
-                  {a.symptoms_description || a.notes || ''}
-                </li>
-              ))}
-            </ul>
+            appointments.map((appointment: any) => (
+              <div key={appointment.id} className="data-card">
+                <h4>Consulta #{appointment.id}</h4>
+                <p>Paciente: {appointment.patient?.name || appointment.patient?.user?.name}</p>
+                <p>Médico: {appointment.doctor?.user?.name}</p>
+                <p>Especialidade: {appointment.doctor?.speciality?.name || appointment.doctor?.speciality}</p>
+                <p>Data: {new Date(appointment.date).toLocaleDateString()}</p>
+                <p>Hora: {appointment.time}</p>
+                {appointment.notes && <p>Observações: {appointment.notes}</p>}
+              </div>
+            ))
           )}
         </div>
       )}
