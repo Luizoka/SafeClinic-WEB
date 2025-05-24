@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { registerReceptionist } from '../services/authService.ts';
+import '../styles/auth.css';
 
 // Função para aplicar máscara de CPF
 function maskCPF(value: string) {
@@ -21,10 +22,11 @@ function maskPhone(value: string) {
 }
 
 export default function RegisterReceptionist() {
-  const [form, setForm] = useState({
+  const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
+    confirmPassword: '',
     cpf: '',
     phone: '',
     work_shift: 'morning'
@@ -36,11 +38,11 @@ export default function RegisterReceptionist() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     if (name === 'cpf') {
-      setForm({ ...form, cpf: maskCPF(value) });
+      setFormData({ ...formData, cpf: maskCPF(value) });
     } else if (name === 'phone') {
-      setForm({ ...form, phone: maskPhone(value) });
+      setFormData({ ...formData, phone: maskPhone(value) });
     } else {
-      setForm({ ...form, [name]: value });
+      setFormData({ ...formData, [name]: value });
     }
   };
 
@@ -48,41 +50,111 @@ export default function RegisterReceptionist() {
     e.preventDefault();
     setError('');
     setSuccess('');
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('As senhas não coincidem');
+      return;
+    }
+
     try {
-      await registerReceptionist(form);
+      await registerReceptionist({
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        cpf: formData.cpf,
+        phone: formData.phone,
+        work_shift: formData.work_shift
+      });
       setSuccess('Recepcionista registrado com sucesso!');
       setTimeout(() => navigate('/login/recepcionista'), 1500);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao registrar recepcionista.');
+      setError(err.message);
     }
   };
 
   return (
-    <div>
-      <h2>Registrar Recepcionista</h2>
-      <form onSubmit={handleSubmit}>
-        <input name="name" placeholder="Nome" value={form.name} onChange={handleChange} required />
-        <input name="email" type="email" placeholder="E-mail" value={form.email} onChange={handleChange} required />
-        <input name="password" type="password" placeholder="Senha" value={form.password} onChange={handleChange} required />
-        <input name="cpf" placeholder="CPF" value={form.cpf} onChange={handleChange} required maxLength={14} />
-        <input name="phone" placeholder="Telefone" value={form.phone} onChange={handleChange} required maxLength={15} />
-        <select name="work_shift" value={form.work_shift} onChange={handleChange} required>
-          <option value="morning">Manhã</option>
-          <option value="afternoon">Tarde</option>
-          <option value="night">Noite</option>
-        </select>
-        <button type="submit">Registrar</button>
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        {success && <p style={{ color: 'green' }}>{success}</p>}
-      </form>
-      <p>
-        Já tem conta? <Link to="/login/recepcionista">Login do Recepcionista</Link>
-      </p>
-      <p>
-        Registrar outros usuários:&nbsp;
-        <Link to="/registro/medico">Registrar Médico</Link> |{' '}
-        <Link to="/registro/paciente">Registrar Paciente</Link>
-      </p>
+    <div className="auth-container receptionist-theme">
+      <div className="auth-card">
+        <h2 className="auth-title">Registro de Recepcionista</h2>
+        <form onSubmit={handleSubmit} className="auth-form">
+          <input
+            className="auth-input"
+            type="text"
+            name="name"
+            placeholder="Nome completo"
+            value={formData.name}
+            onChange={handleChange}
+            required
+          />
+          <input
+            className="auth-input"
+            type="email"
+            name="email"
+            placeholder="E-mail"
+            value={formData.email}
+            onChange={handleChange}
+            required
+          />
+          <input
+            className="auth-input"
+            type="text"
+            name="cpf"
+            placeholder="CPF"
+            value={formData.cpf}
+            onChange={handleChange}
+            required
+          />
+          <input
+            className="auth-input"
+            type="text"
+            name="phone"
+            placeholder="Telefone"
+            value={formData.phone}
+            onChange={handleChange}
+            required
+          />
+          <input
+            className="auth-input"
+            type="password"
+            name="password"
+            placeholder="Senha"
+            value={formData.password}
+            onChange={handleChange}
+            required
+          />
+          <input
+            className="auth-input"
+            type="password"
+            name="confirmPassword"
+            placeholder="Confirmar senha"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            required
+          />
+          <select
+            className="auth-input"
+            name="work_shift"
+            value={formData.work_shift}
+            onChange={handleChange}
+            required
+          >
+            <option value="morning">Manhã</option>
+            <option value="afternoon">Tarde</option>
+            <option value="night">Noite</option>
+          </select>
+          <button type="submit" className="auth-button">Registrar</button>
+          {error && <p className="auth-error">{error}</p>}
+          {success && <p className="auth-success">{success}</p>}
+        </form>
+        <p className="auth-link">
+          Já tem conta? <Link to="/login/recepcionista">Faça login</Link>
+        </p>
+        <p className="auth-link">
+          Registrar outros usuários:&nbsp;
+          <Link to="/registro/medico">Registrar Médico</Link> |{' '}
+          <Link to="/registro/paciente">Registrar Paciente</Link>
+        </p>
+      </div>
     </div>
   );
 }
