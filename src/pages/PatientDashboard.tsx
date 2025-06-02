@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getUser, logout } from '../services/authService.ts';
+import { getUser, logout, getToken } from '../services/authService.ts';
 import {
   getPatientById,
   updatePatient,
@@ -105,6 +105,8 @@ const styles = {
 
 type TabType = 'profile' | 'appointments' | 'bookAppointment';
 
+const MAX_RETRIES = 3;
+
 const PatientDashboard: React.FC = () => {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [user, setUser] = useState<any>(null); // Consider defining a User type as in authService
@@ -131,12 +133,20 @@ const PatientDashboard: React.FC = () => {
   const [symptoms, setSymptoms] = useState('');
   const [appointmentType, setAppointmentType] = useState<'online' | 'in-person'>('online');
 
+  const [retryCount, setRetryCount] = useState(0);
+
   const navigate = useNavigate();
 
   const loadPatientData = useCallback(async (userId: string) => {
     setLoading(true);
     setError(null);
     try {
+      // Add a small delay to ensure token is stored
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const token = getToken();
+      if (!token) {
+        throw new Error('Token de autenticação não encontrado. Por favor, faça login novamente.');
+      }
       const response = await getPatientById(userId);
       setPatient(response.data);
       setProfileForm({
@@ -148,15 +158,27 @@ const PatientDashboard: React.FC = () => {
         blood_type: response.data.blood_type || '',
         allergies: response.data.allergies || '',
       });
+      setRetryCount(0); // Reset retry count on success
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao carregar dados do paciente.');
+      console.error('Erro ao carregar dados do paciente:', {
+        error: err,
+        response: err.response,
+        status: err.response?.status,
+        data: err.response?.data
+      });
+      
       if (err.response?.status === 401 || err.response?.status === 403) {
+        setError('Sessão expirada. Por favor, faça login novamente.');
         logout();
         navigate('/login/paciente');
+        return;
       }
+
+      const errorMessage = err.response?.data?.message || err.message || 'Erro ao carregar dados do paciente.';
+      setError(`${errorMessage} ${retryCount < MAX_RETRIES ? '(Tentativa ' + (retryCount + 1) + ' de ' + MAX_RETRIES + ')' : ''}`);
     }
     setLoading(false);
-  }, [navigate]);
+  }, [navigate, retryCount]);
 
   useEffect(() => {
     const currentUser = getUser();
@@ -325,7 +347,47 @@ const PatientDashboard: React.FC = () => {
   };
 
   if (!user || !patient) {
-    return <div style={styles.container}>Carregando dados do paciente... {error && <p style={styles.error}>{error}</p>}</div>;
+    return (
+      <div style={styles.container}>
+        {loading ? (
+          <p>Carregando dados do paciente...</p>
+        ) : error ? (
+          <div>
+            <p style={styles.error}>{error}</p>
+            {retryCount < MAX_RETRIES && (
+              <button
+                onClick={() => {
+                  setRetryCount(prev => prev + 1);
+                  if (user) {
+                    loadPatientData(user.id);
+                  }
+                }}
+                style={{
+                  ...styles.button,
+                  marginTop: '10px'
+                }}
+              >
+                Tentar Novamente
+              </button>
+            )}
+            <button
+              onClick={() => {
+                logout();
+                navigate('/login/paciente');
+              }}
+              style={{
+                ...styles.button,
+                backgroundColor: '#dc3545',
+                marginTop: '10px',
+                marginLeft: '10px'
+              }}
+            >
+              Voltar para Login
+            </button>
+          </div>
+        ) : null}
+      </div>
+    );
   }
 
   return (

@@ -3,8 +3,15 @@ import { getToken } from './authService.ts';
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
+if (!API_BASE_URL) {
+  console.error('API_BASE_URL não está definido. Verifique o arquivo .env');
+}
+
 const authHeaders = () => {
   const token = getToken();
+  if (!token) {
+    console.error('Token não encontrado ao tentar fazer requisição');
+  }
   return {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -89,8 +96,46 @@ export const getAllPatients = async (page = 1, limit = 10) => {
 };
 
 // 3. Get patient details by user_id
-export const getPatientById = async (id: string) => {
-  return axios.get<Patient>(`${API_BASE_URL}/api/v1/patients/${id}`, authHeaders());
+export const getPatientById = async (id: string, retryCount = 0) => {
+  const url = `${API_BASE_URL}/api/v1/patients/${id}`;
+  console.log('Fazendo requisição para:', url);
+  try {
+    const headers = authHeaders();
+    console.log('Headers da requisição:', {
+      ...headers,
+      headers: {
+        ...headers.headers,
+        Authorization: headers.headers.Authorization ? 'Bearer [REDACTED]' : 'undefined'
+      }
+    });
+    
+    const response = await axios.get<Patient>(url, headers);
+    return response;
+  } catch (error: any) {
+    console.error('Erro detalhado na requisição getPatientById:', {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      headers: error.response?.headers,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+        headers: {
+          ...error.config?.headers,
+          Authorization: 'Bearer [REDACTED]'
+        }
+      }
+    });
+
+    // Se for erro 500 e ainda não tentamos muito, podemos tentar novamente
+    if (error.response?.status === 500 && retryCount < 2) {
+      console.log(`Tentando novamente (${retryCount + 1}/2)...`);
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Espera 1 segundo
+      return getPatientById(id, retryCount + 1);
+    }
+
+    throw error;
+  }
 };
 
 // 4. Update patient data
