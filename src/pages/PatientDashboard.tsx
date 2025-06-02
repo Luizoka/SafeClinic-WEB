@@ -124,14 +124,12 @@ const PatientDashboard: React.FC = () => {
 
   // Book Appointment states
   const [availableDoctors, setAvailableDoctors] = useState<DoctorForBooking[]>([]);
-  const [specialities, setSpecialities] = useState<Speciality[]>([]);
+  const [specialities, setSpecialities] = useState<{id: string, name: string}[]>([]);
   const [selectedSpeciality, setSelectedSpeciality] = useState<string>('');
   const [selectedDoctor, setSelectedDoctor] = useState<DoctorForBooking | null>(null);
   const [appointmentDate, setAppointmentDate] = useState<string>('');
-  const [availableTimeSlots, setAvailableTimeSlots] = useState<TimeSlot[]>([]);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(null);
-  const [symptoms, setSymptoms] = useState('');
-  const [appointmentType, setAppointmentType] = useState<'online' | 'in-person'>('online');
+  const [appointmentTime, setAppointmentTime] = useState<string>('');
+  const [notes, setNotes] = useState('');
 
   const [retryCount, setRetryCount] = useState(0);
 
@@ -219,82 +217,54 @@ const PatientDashboard: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await getMyPatientAppointments(); // Assuming it fetches for the logged-in user
-      setMyAppointments(response.data.appointments || []);
+      const response = await getMyPatientAppointments();
+      // Filtrar apenas os agendamentos do paciente logado
+      const allAppointments = response.data.data || [];
+      const filtered = user ? allAppointments.filter((apt: any) => apt.patient?.user_id === user.id) : [];
+      setMyAppointments(filtered);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erro ao carregar agendamentos.');
     }
     setLoading(false);
+  }, [user]);
+
+  const loadDoctorsAndSpecialities = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const doctorsRes = await getAvailableDoctors(1, 100);
+      const doctors = doctorsRes.data.doctors || [];
+      setAvailableDoctors(doctors);
+      // Montar especialidades únicas
+      const uniqueSpecs: {[id: string]: string} = {};
+      doctors.forEach(doc => {
+        if (doc.speciality && doc.speciality.id) {
+          uniqueSpecs[doc.speciality.id] = doc.speciality.name;
+        }
+      });
+      setSpecialities(Object.entries(uniqueSpecs).map(([id, name]) => ({id, name})));
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Erro ao carregar médicos/especialidades.');
+    }
+    setLoading(false);
   }, []);
 
-  const loadSpecialitiesAndDoctors = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [specialitiesRes, doctorsRes] = await Promise.all([
-        getSpecialities(),
-        getAvailableDoctors(1, 100, selectedSpeciality || undefined)
-      ]);
-      setSpecialities(specialitiesRes.data.data || []);
-      setAvailableDoctors(doctorsRes.data.doctors || []);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao carregar especialidades/médicos.');
-    }
-    setLoading(false);
-  }, [selectedSpeciality]);
-
-  const loadTimeSlots = useCallback(async () => {
-    if (!selectedDoctor || !appointmentDate) {
-      setAvailableTimeSlots([]);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await getDoctorAvailability(selectedDoctor.user_id, appointmentDate);
-      setAvailableTimeSlots(response.data.available_slots || []);
-      setSelectedTimeSlot(null); // Reset selected time slot when date or doctor changes
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao carregar horários disponíveis.');
-      setAvailableTimeSlots([]);
-    }
-    setLoading(false);
-  }, [selectedDoctor, appointmentDate]);
-
- useEffect(() => {
+  useEffect(() => {
     if (activeTab === 'appointments') {
       loadMyAppointments();
     } else if (activeTab === 'bookAppointment') {
-      loadSpecialitiesAndDoctors();
+      loadDoctorsAndSpecialities();
     }
-  }, [activeTab, loadMyAppointments, loadSpecialitiesAndDoctors]);
+  }, [activeTab, loadMyAppointments, loadDoctorsAndSpecialities]);
 
-  useEffect(() => {
-    if (activeTab === 'bookAppointment') {
-        loadTimeSlots();
-    }
-  }, [selectedDoctor, appointmentDate, activeTab, loadTimeSlots]);
-  
-  // Filter doctors when speciality changes
-  useEffect(() => {
-    if (activeTab === 'bookAppointment') {
-        setLoading(true);
-        setError(null);
-        getAvailableDoctors(1, 100, selectedSpeciality || undefined)
-            .then(res => setAvailableDoctors(res.data.doctors || []))
-            .catch(err => setError(err.response?.data?.message || 'Erro ao filtrar médicos.'))
-            .finally(() => setLoading(false));
-        setSelectedDoctor(null); // Reset doctor when speciality changes
-        setAppointmentDate('');
-        setAvailableTimeSlots([]);
-        setSelectedTimeSlot(null);
-    }
-  }, [selectedSpeciality, activeTab]);
-
+  // Filtrar médicos pela especialidade selecionada
+  const filteredDoctors = selectedSpeciality
+    ? availableDoctors.filter(doc => doc.speciality?.id === selectedSpeciality)
+    : availableDoctors;
 
   const handleBookAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedDoctor || !selectedTimeSlot || !appointmentDate) {
+    if (!selectedDoctor || !appointmentDate || !appointmentTime) {
       setError('Por favor, selecione médico, data e horário.');
       return;
     }
@@ -302,29 +272,24 @@ const PatientDashboard: React.FC = () => {
     setError(null);
     setSuccess(null);
 
-    // Construct ISO datetime string
-    // Ensure date is in YYYY-MM-DD and time is HH:mm
-    const dateTimeString = `${appointmentDate}T${selectedTimeSlot.start_time}:00`; // Assuming server handles timezone or it's UTC
-
-    const payload: CreateAppointmentPayload = {
+    const payload = {
       doctor_id: selectedDoctor.user_id,
-      appointment_datetime: dateTimeString,
-      type: appointmentType,
-      symptoms_description: symptoms,
+      patient_id: user.id,
+      date: appointmentDate,
+      time: appointmentTime,
+      notes: notes,
     };
 
     try {
       await createAppointmentByPatient(payload);
       setSuccess('Consulta agendada com sucesso!');
-      // Reset form
       setSelectedSpeciality('');
       setSelectedDoctor(null);
       setAppointmentDate('');
-      setAvailableTimeSlots([]);
-      setSelectedTimeSlot(null);
-      setSymptoms('');
-      setActiveTab('appointments'); // Switch to appointments tab
-      loadMyAppointments(); // Refresh appointments list
+      setAppointmentTime('');
+      setNotes('');
+      setActiveTab('appointments');
+      loadMyAppointments();
     } catch (err: any) {
       setError(err.response?.data?.message || 'Erro ao agendar consulta.');
     }
@@ -520,8 +485,8 @@ const PatientDashboard: React.FC = () => {
                 disabled={availableDoctors.length === 0}
               >
                 <option value="">Selecione um médico</option>
-                {availableDoctors.map(doc => (
-                  <option key={doc.user_id} value={doc.user_id}>{doc.name} - {doc.speciality.name}</option>
+                {filteredDoctors.map(doc => (
+                  <option key={doc.user_id} value={doc.user_id}>{doc.user?.name} - {doc.speciality?.name}</option>
                 ))}
               </select>
             </div>
@@ -540,55 +505,31 @@ const PatientDashboard: React.FC = () => {
                     />
                 </div>
 
-                {appointmentDate && availableTimeSlots.length > 0 && (
-                    <div style={styles.formGroup}>
-                        <label style={styles.label}>Horários Disponíveis:</label>
-                        <div>
-                        {availableTimeSlots.filter(slot => slot.available).map(slot => (
-                            <button 
-                                type="button"
-                                key={slot.start_time}
-                                style={styles.timeSlotButton(slot.available, selectedTimeSlot?.start_time === slot.start_time)}
-                                onClick={() => setSelectedTimeSlot(slot)}
-                                disabled={!slot.available}
-                            >
-                                {slot.start_time} - {slot.end_time}
-                            </button>
-                        ))}
-                        {availableTimeSlots.filter(slot => slot.available).length === 0 && <p>Nenhum horário disponível para esta data.</p>}
-                        </div>
-                    </div>
-                )}
-                {appointmentDate && availableTimeSlots.length === 0 && !loading && 
-                  <p>Verificando horários... ou nenhum horário disponível para este médico nesta data.</p>}
-
                 <div style={styles.formGroup}>
-                  <label style={styles.label} htmlFor="appointmentType">Tipo de Consulta:</label>
-                  <select 
+                  <label style={styles.label} htmlFor="appointmentTime">Horário:</label>
+                  <input 
                     style={styles.input} 
-                    id="appointmentType" 
-                    value={appointmentType} 
-                    onChange={(e) => setAppointmentType(e.target.value as 'online' | 'in-person')}
-                  >
-                    <option value="online">Online</option>
-                    <option value="in-person">Presencial</option>
-                  </select>
+                    type="time" 
+                    id="appointmentTime" 
+                    value={appointmentTime} 
+                    onChange={e => setAppointmentTime(e.target.value)}
+                  />
                 </div>
 
                 <div style={styles.formGroup}>
-                  <label style={styles.label} htmlFor="symptoms">Sintomas (opcional):</label>
+                  <label style={styles.label} htmlFor="notes">Notas:</label>
                   <textarea 
                     style={styles.input} 
-                    id="symptoms" 
-                    value={symptoms} 
-                    onChange={e => setSymptoms(e.target.value)} 
+                    id="notes" 
+                    value={notes} 
+                    onChange={e => setNotes(e.target.value)} 
                     rows={3}
                     placeholder="Descreva brevemente seus sintomas"
                   />
                 </div>
               </>
             )}
-            <button style={styles.button} type="submit" disabled={loading || !selectedDoctor || !selectedTimeSlot}>Agendar</button>
+            <button style={styles.button} type="submit" disabled={loading || !selectedDoctor || !appointmentDate || !appointmentTime}>Agendar</button>
           </form>
         </section>
       )}

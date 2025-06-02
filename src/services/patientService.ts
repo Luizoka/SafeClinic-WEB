@@ -181,8 +181,12 @@ export const getMyPatientAppointments = async (page = 1, limit = 10, status?: st
     limit: limit.toString(),
   });
   if (status) params.append('status', status);
-  // Assuming an endpoint like /api/v1/patients/me/appointments or that /api/v1/appointments filters by logged-in patient user
-  return axios.get<PaginatedPatientAppointmentsResponse>(`${API_BASE_URL}/api/v1/appointments/patient/me?${params.toString()}`, authHeaders());
+  try {
+    return await axios.get<{ data: PatientAppointment[]; metadata: any }>(`${API_BASE_URL}/api/v1/appointments?${params.toString()}`, authHeaders());
+  } catch (error) {
+    console.error('Endpoint não encontrado (Meus agendamentos)', error);
+    throw error;
+  }
 };
 
 // 7. List doctors (e.g., for booking an appointment)
@@ -210,8 +214,12 @@ export const getAvailableDoctors = async (page = 1, limit = 100, specialityId?: 
     limit: limit.toString(),
   });
   if (specialityId) params.append('speciality_id', specialityId);
-  return axios.get<PaginatedDoctorsResponse>(`${API_BASE_URL}/api/v1/doctors/available?${params.toString()}`, authHeaders());
-  // Assuming a dedicated endpoint or that /api/v1/doctors can be filtered
+  try {
+    return await axios.get<PaginatedDoctorsResponse>(`${API_BASE_URL}/api/v1/doctors?${params.toString()}`, authHeaders());
+  } catch (error) {
+    console.error('Erro ao buscar médico', error);
+    throw error;
+  }
 };
 
 
@@ -228,14 +236,14 @@ export const getSpecialities = async () => {
 
 // 9. Create an appointment (by patient)
 export interface CreateAppointmentPayload {
-  doctor_id: string; // user_id of the doctor
-  appointment_datetime: string; // ISO string "YYYY-MM-DDTHH:mm:ssZ"
-  type: 'online' | 'in-person'; // Example
-  symptoms_description?: string;
+  doctor_id: string;
+  patient_id: string;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:mm
+  notes?: string;
 }
 export const createAppointmentByPatient = async (data: CreateAppointmentPayload) => {
-  return axios.post<PatientAppointment>(`${API_BASE_URL}/api/v1/appointments`, data, authHeaders());
-  // Assuming the backend infers patient_id from the authenticated user
+  return axios.post(`${API_BASE_URL}/api/v1/appointments`, data, authHeaders());
 };
 
 // 10. Get Doctor's available time slots (NEW - this is crucial for booking)
