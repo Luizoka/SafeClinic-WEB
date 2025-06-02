@@ -8,6 +8,7 @@ import RegisterDoctor from './pages/RegisterDoctor.tsx';
 import RegisterReceptionist from './pages/RegisterReceptionist.tsx';
 import ReceptionistDashboard from './pages/ReceptionistDashboard.tsx';
 import DoctorDashboard from './pages/DoctorDashboard.tsx';
+import PatientDashboard from './pages/PatientDashboard.tsx';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
         <Route path="/registro/recepcionista" element={<RegisterReceptionist />} />
         <Route path="/painel/recepcionista" element={<ReceptionistDashboard />} />
         <Route path="/painel/medico" element={<DoctorDashboard />} />
+        <Route path="/painel/paciente" element={<PatientDashboard />} />
         {/* ...outras rotas... */}
       </Routes>
     </Router>
